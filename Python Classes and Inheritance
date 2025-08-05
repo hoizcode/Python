@@ -1,0 +1,357 @@
+20.1. Introduction: Classes and Objects - the Basics
+20.1.1. Object-oriented programming
+Python is an object-oriented programming language. That means it provides features that support object-oriented programming (OOP).
+Object-oriented programming has its roots in the 1960s, but it wasn’t until the mid 1980s that it became the main programming paradigm used in the creation of new software. It was developed as a way to handle the rapidly increasing size and complexity of software systems and to make it easier to modify these large and complex systems over time.
+Up to now, some of the programs we have been writing use a procedural programming paradigm. In procedural programming the focus is on writing functions or procedures which operate on data. In object-oriented programming the focus is on the creation of objects which contain both data and functionality together. Usually, each object definition corresponds to some object or concept in the real world and the functions that operate on that object correspond to the ways real-world objects interact.
+
+
+20.2. Objects Revisited
+In Python, every value is actually an object. Whether it be a dictionary, a list, or even an integer, they are all objects. Programs manipulate those objects either by performing computation with them or by asking them to perform methods. To be more specific, we say that an object has a state and a collection of methods that it can perform. (More about methods below.) The state of an object represents those things that the object knows about itself. The state is stored in instance variables. For example, as we have seen with turtle objects, each turtle has a state consisting of the turtle’s position, its color, its heading and so on. Each turtle also has the ability to go forward, backward, or turn right or left. Individual turtles are different in that even though they are all turtles, they differ in the specific values of the individual state attributes (maybe they are in a different location or have a different heading).
+
+
+class Point():
+    def getX(self):
+        return self.x
+    
+point1 = Point()
+point1.x = 5
+print(point1.getX())
+5
+
+
+20.3. User Defined Classes
+
+
+Every class should have a method with the special name __init__. This initializer method, often referred to as the constructor, is automatically called whenever a new instance of Point is created. It gives the programmer the opportunity to set up the attributes required within the new instance by giving them their initial state values. The self parameter (you could choose any other name, but nobody ever does!) is automatically set to reference the newly created object that needs to be initialized.
+
+
+During the initialization of the objects, we created two attributes called x and y for each object, and gave them both the value 0. You will note that when you run the program, nothing happens. It turns out that this is not quite the case. In fact, two Points have been created, each having an x and y coordinate with value 0. However, because we have not asked the program to do anything with the points, we don’t see any other result.
+
+The following program adds a few print statements. You can see that the output suggests that each one is a Point object. However, notice that the is operator returns False meaning that they are different objects (we will have more to say about this in a later section).
+
+
+class MyClass:
+    def __init__(self, a, b, c):        
+        self.a = a + 10
+ 	   self.x = b * c
+
+
+inst_1 = MyClass(5, 2, 3)
+inst_2 = MyClass(10, 20, 30)
+
+
+inst_1.a = 15, inst_1.x = 6
+
+
+
+Check Your Understanding
+Create a class called NumberSet that accepts 2 integers as input, and defines two instance variables: num1 and num2, which hold each of the input integers. Then, create an instance of NumberSet where its num1 is 6 and its num2 is 10. Save this instance to a variable t.
+class NumberSet:
+    def __init__(self, num1, num2):
+        self.num1 = num1
+        self.num2 = num2
+        #return self.num1 and self.num2
+t = NumberSet(6, 10)
+
+
+Traceback (most recent call last):
+  File "<input>", line 8, in <module>
+TypeError: __init__() should return None, not 'int'
+
+
+You're seeing this error because the __init__ method must not return anything other than None — it's a constructor, not a normal function.
+
+
+class NumberSet:
+    def __init__(self, num1, num2):
+        self.num1 = num1
+        self.num2 = num2
+
+
+    def work(self):
+        print (f"This is {self.num1} and {self.num2}")
+
+
+t = NumberSet(6, 10)
+t.work()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Adding Other Methods to a Class
+class Point:
+    def __init__(self,x,y):
+        self.x=x
+        self.y=y
+    def getX(self):
+        print(self.x) #return self.x
+    def getY(self):
+        print(self.y) #return self.y
+point1 = Point(10,100)
+point1.getX()
+point1.getY()
+10
+100
+-
+class Point:
+    def __init__(self,x,y):
+        self.x=x
+        self.y=y
+    def getX(self):
+        return self.x
+    def getY(self):
+        return self.y
+point1 = Point(10,100)
+print(point1.getX())
+print(point1.getY())
+
+
+class Point:
+    """ Point class for representing and manipulating x,y coordinates. """
+
+
+    def __init__(self, initX, initY):
+
+
+        self.x = initX
+        self.y = initY
+
+
+    def getX(self):
+        return self.x
+
+
+    def getY(self):
+        return self.y
+
+
+    def distanceFromOrigin(self):
+        return ((self.x ** 2) + (self.y ** 2)) ** 0.5
+
+
+p = Point(7,6)
+print(p.distanceFromOrigin())
+#More examples:
+Expression
+Meaning
+Result
+3 ** 2
+3 squared
+9
+4 ** 3
+4 cubed (4 × 4 × 4)
+64
+9 ** 0.5
+Square root of 9
+3.0
+
+
+
+
+
+
+Check Your Understanding
+Create a class called Animal that accepts two numbers as inputs and assigns them respectively to two instance variables: arms and legs. Create an instance method called limbs that, when called, returns the total number of limbs the animal has. To the variable name spider, assign an instance of Animal that has 4 arms and 4 legs. Call the limbs method on the spider instance and save the result to the variable name spidlimbs.
+
+
+class Animal:
+    
+    def __init__(self,arms,legs):
+        self.arms=arms
+        self.legs=legs
+    def limbs(self):
+        return self.arms+self.legs
+    
+spider=Animal(4,4)
+spidlimbs=spider.limbs()
+print(spidlimbs)
+
+Instance Variable Search Order
+class Point:
+    def __init__(self,x,y):
+        self.x=x
+        self.y=y
+    def getX(self):
+        return self.x
+    def getY(self):
+        return self.y
+point1 = Point(10,100)
+print(point1.getX())
+print(point1.x)
+print(point1.getY())
+
+
+What is the value of the expression inst_1.f() after the following code has run?
+class MyClass:
+   def __init__(self, num):
+       self.f = lambda: 20
+       self.x = num
+   def f(self):
+       return 30
+
+
+inst_1 = MyClass(5)
+inst_1.f()
+
+
+Ans: 20
+The class method f is overwritten by the lambda function assigned to the instance variable f in the __init__ method. When that lambda function is executed it returns 20.
+class MyClass:
+   def __init__(self, num):
+       self.f = lambda: 20
+       self.x = num
+   def f(self):
+       return 30
+inst_1 = MyClass(5)
+#print(inst_1.f)
+print(inst_1.f())
+20
+
+
+3. What is a lambda function? (with full explanation)
+lambda arguments: expression
+
+add = lambda x, y: x + y
+print(add(10, 20))  # Output: 30
+
+add = lambda x, y: y - x
+print(add(10, 20))
+Output: 10
+
+This is exactly the same as:
+def add(x, y):
+    return x + y
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+🔍 When and Why Use lambda?
+Quick functions: When you need a simple function for a short time.
+
+
+Functional programming: Often used with map(), filter(), and sorted().
+
+
+Example with sorted():
+students = [("Alice", 85), ("Bob", 75), ("Charlie", 95)]
+# Sort by score
+sorted_students = sorted(students, key=lambda x: x[1])
+print(sorted_students)
+# Output: [('Bob', 75), ('Alice', 85), ('Charlie', 95)]
+Syntax of sorted():
+sorted(iterable, *, key=None, reverse=False)
+iterable: The collection you want to sort (like your students list).
+key: A function that takes an item from the iterable and returns the value to sort by.
+reverse: Boolean (False by default). If True, sorts in descending order.
+Sort by score in descending order (highest to lowest):
+sorted_students_desc = sorted(students, key=lambda x: x[1], reverse=True)
+print(sorted_students_desc)
+
+
+
+Example with filter():
+students = [("Alice", 85), ("Bob", 75), ("Charlie", 95)]
+filtered_students = list(filter(lambda x: x[1] > 90, students))
+print(filtered_students)
+#The correct syntax for filter() is:
+filter(function, iterable)
+students = a list
+##
+You're trying to filter a list of student name-score tuples to include only those with a score greater than 90. 
+
+
+students = [("Alice", 85), ("Bob", 75), ("Charlie", 95)]
+
+
+def filter_point(name, score):
+    return score > 90
+
+
+filtered_students = [(name, score) for name, score in students if filter_point(name, score)]
+
+
+print(filtered_students)
+
+
+
+
+
+
+
+
+
+What is map()?
+map(function, iterable, ...)
+Here's a practical example using your students list where map() shines.
+students = [("Alice", 85), ("Bob", 75), ("Charlie", 95)]
+
+
+# Define a function that takes a student tuple and returns a new tuple with increased score
+def add_bonus(student):
+    name, score = student
+    return (name, score + 5)
+
+
+# Use map to apply add_bonus to every student
+updated_students = list(map(add_bonus, students))
+
+
+print(updated_students)
+##
+If you'd like to unpack each tuple in the list into name, score directly and apply the bonus without wrapping it as a tuple called student, here's how you can adjust your code:
+students = [("Alice", 85), ("Bob", 75), ("Charlie", 95)]
+# Define a function that takes name and score separately
+def add_bonus(name, score):
+    return (name, score + 5)
+# Use list comprehension with unpacking instead of map
+updated_students = [add_bonus(name, score) for name, score in students]
+print(updated_students)
+[('Alice', 90), ('Bob', 80), ('Charlie', 100)]
+
+
+
+
+
+##
+Here’s a simple example using map() with a lambda on your students list.
+students = [("Alice", 85), ("Bob", 75), ("Charlie", 95)]
+
+
+# Use map with lambda to extract and uppercase the names
+uppercase_names = list(map(lambda student: student[0].upper(), students))
+
+
+print(uppercase_names)
+
+
+['ALICE', 'BOB', 'CHARLIE']
