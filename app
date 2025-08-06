@@ -1,5 +1,5 @@
 import streamlit as st
-from stock3 import fetch_data, analyze_trend
+from stockdata import fetch_data, analyze_trend
 import matplotlib.pyplot as plt
 
 st.title("📈 Stock Trend Analyzer")
