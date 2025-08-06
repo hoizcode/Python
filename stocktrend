@@ -1,0 +1,252 @@
+import yfinance as yf
+import matplotlib.pyplot as plt
+import numpy as np
+import os
+import sys
+import pandas as pd
+import tkinter as tk
+from tkinter import ttk, messagebox
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+
+# ----------------------------------------
+# Parameters
+# ----------------------------------------
+PRICE_SLOPE_THRESHOLD = 0.001  # normalized slope threshold for price
+VOLUME_SLOPE_THRESHOLD = 0.01  # threshold for volume slope
+RECENT_DAYS_5 = 5
+RECENT_DAYS_10 = 10
+
+# ----------------------------------------
+# Fetch stock data
+# ----------------------------------------
+def fetch_data(ticker, period='30d', interval='1d'):
+    try:
+        stock = yf.Ticker(ticker)
+        data = stock.history(period=period, interval=interval)
+        if data.empty:
+            return None, f"No data found for {ticker}. Please check the symbol."
+        return data, None
+    except Exception as e:
+        return None, f"Error fetching data for {ticker}: {e}"
+
+# ----------------------------------------
+# Detect trend by normalized linear regression slope
+# ----------------------------------------
+def detect_trend(series, threshold=PRICE_SLOPE_THRESHOLD, is_volume=False):
+    values = series.values
+    x = np.arange(len(values))
+    slope, intercept = np.polyfit(x, values, 1)
+    avg_value = np.mean(values)
+
+    if avg_value == 0:
+        normalized_slope = 0
+    else:
+        normalized_slope = slope / avg_value if not is_volume else slope
+
+    if is_volume:
+        if normalized_slope > VOLUME_SLOPE_THRESHOLD:
+            trend = "uptrend"
+        elif normalized_slope < -VOLUME_SLOPE_THRESHOLD:
+            trend = "downtrend"
+        else:
+            trend = "sideways"
+    else:
+        if normalized_slope > threshold:
+            trend = "uptrend"
+        elif normalized_slope < -threshold:
+            trend = "downtrend"
+        else:
+            trend = "sideways"
+
+    return normalized_slope, trend
+
+# ----------------------------------------
+# Calculate confidence level based on slope magnitude
+# ----------------------------------------
+def confidence_level(slope, threshold):
+    magnitude = abs(slope)
+    if magnitude > 3 * threshold:
+        return "High"
+    elif magnitude > threshold:
+        return "Medium"
+    else:
+        return "Low"
+
+# ----------------------------------------
+# Analyze separate 5-day and 10-day trends + combined
+# ----------------------------------------
+def explain_trend(price_trend, volume_trend):
+    if price_trend == "uptrend" and volume_trend == "uptrend":
+        return "🎉 價格與成交量雙雙上升 — 看來買氣正熱烈湧現！"
+    elif price_trend == "uptrend" and volume_trend == "downtrend":
+        return "📈 價格上漲但成交量下降 — 謹慎的上漲趨勢，值得多加留意！"
+    elif price_trend == "downtrend" and volume_trend == "downtrend":
+        return "⚠️ 價格與成交量雙雙下跌 — 空頭氣氛濃厚。"
+    elif price_trend == "downtrend" and volume_trend == "uptrend":
+        return "🔍 價格下跌但成交量上升 — 可能有聰明資金在悄悄布局。"
+    else:
+        return "🤔 價格與成交量趨於平穩 — 市場正暫時休息中。"
+
+def analyze_separate_and_combined_trends(df):
+    if len(df) < RECENT_DAYS_10:
+        return ("哎呀！資料不足，暫時無法進行趨勢分析。", None, None, None, None)
+
+    recent_5 = df.tail(RECENT_DAYS_5)
+    recent_10 = df.tail(RECENT_DAYS_10)
+
+    slope_5_price, trend_5_price = detect_trend(recent_5['Close'], PRICE_SLOPE_THRESHOLD)
+    slope_5_vol, trend_5_vol = detect_trend(recent_5['Volume'], is_volume=True)
+    conf_5_price = confidence_level(slope_5_price, PRICE_SLOPE_THRESHOLD)
+    conf_5_vol = confidence_level(slope_5_vol, VOLUME_SLOPE_THRESHOLD)
+    explanation_5d = explain_trend(trend_5_price, trend_5_vol)
+
+    slope_10_price, trend_10_price = detect_trend(recent_10['Close'], PRICE_SLOPE_THRESHOLD)
+    slope_10_vol, trend_10_vol = detect_trend(recent_10['Volume'], is_volume=True)
+    conf_10_price = confidence_level(slope_10_price, PRICE_SLOPE_THRESHOLD)
+    conf_10_vol = confidence_level(slope_10_vol, VOLUME_SLOPE_THRESHOLD)
+    explanation_10d = explain_trend(trend_10_price, trend_10_vol)
+
+    estimate_5d = (
+        f"🌟 5日趨勢：價格為 {trend_5_price} "
+        f"(信心度: {conf_5_price})，成交量為 {trend_5_vol} "
+        f"(信心度: {conf_5_vol})\n  ✨ 解析：{explanation_5d}"
+    )
+    estimate_10d = (
+        f"🌟 10日趨勢：價格為 {trend_10_price} "
+        f"(信心度: {conf_10_price})，成交量為 {trend_10_vol} "
+        f"(信心度: {conf_10_vol})\n  ✨ 解析：{explanation_10d}"
+    )
+
+    if (trend_5_price == trend_10_price) and (trend_5_vol == trend_10_vol):
+        combined_trend = trend_10_price
+        combined_message = f"🎯 綜合趨勢確認：{combined_trend}（5日與10日趨勢一致！）"
+        combined_explanation = f"💡 短期與中期趨勢同聲唱和：{combined_trend}。"
+        alert = None
+        if combined_trend == "uptrend" and conf_10_price == "High" and conf_10_vol == "High":
+            alert = "🚀 強烈買進訊號！準備迎接獲利！"
+        elif combined_trend == "downtrend" and conf_10_price == "High" and conf_10_vol == "High":
+            alert = "⚠️ 強烈賣出訊號！請保持警覺。"
+    else:
+        combined_message = "🤷‍♂️ 綜合趨勢：無明確趨勢（5日與10日趨勢不一致）"
+        combined_explanation = "🌀 短期與中期訊號分歧，市場可能處於觀望狀態，請耐心等待。"
+        alert = None
+
+    return estimate_5d, estimate_10d, combined_message, combined_explanation, alert
+
+
+
+# ----------------------------------------
+# Plot price and volume charts with date formatting
+# ----------------------------------------
+def plot_stock(df, ticker, container):
+    # Clear previous plots
+    for widget in container.winfo_children():
+        widget.destroy()
+
+    try:
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(9, 6), sharex=True)
+
+        ax1.plot(df.index, df['Close'], label='Close Price', color='blue')
+        ax1.plot(df.index, df['Close'].rolling(5).mean(), label='5-Day MA', linestyle='--', color='orange')
+        ax1.set_title(f"{ticker} - Closing Prices")
+        ax1.set_ylabel("Price")
+        ax1.grid(True)
+        ax1.legend()
+
+        ax2.bar(df.index, df['Volume'], color='grey', alpha=0.6, label='Volume')
+        ax2.plot(df.index, df['Volume'].rolling(5).mean(), label='5-Day MA Volume', color='red')
+        ax2.set_title(f"{ticker} - Volume")
+        ax2.set_ylabel("Volume")
+        ax2.grid(True)
+        ax2.legend()
+
+        fig.autofmt_xdate()
+        plt.tight_layout()
+
+        canvas = FigureCanvasTkAgg(fig, master=container)
+        canvas.draw()
+        canvas.get_tk_widget().pack(fill="both", expand=True)
+
+    except Exception as e:
+        messagebox.showerror("Plot Error", f"Error plotting data: {e}")
+
+# ----------------------------------------
+# GUI Application
+# ----------------------------------------
+def run_gui():
+    root = tk.Tk()
+    root.title("Stock Trend Analyzer")
+    root.geometry("700x700")
+
+    # Frame for inputs and buttons
+    frame = ttk.Frame(root)
+    frame.pack(pady=10, padx=10, fill='x')
+
+    ttk.Label(frame, text="Ticker:").pack(side="left")
+    ticker_var = tk.StringVar()
+    ticker_entry = ttk.Entry(frame, textvariable=ticker_var, width=10)
+    ticker_entry.pack(side="left", padx=5)
+    ticker_entry.focus()
+
+    # Time Range Dropdown
+    time_ranges = ['14d', '30d', '60d', '90d', '6mo', '1y', '2y']
+    selected_time_range = tk.StringVar(value='30d')
+    ttk.Label(frame, text="Time Range:").pack(side="left", padx=5)
+    time_dropdown = ttk.Combobox(frame, textvariable=selected_time_range, values=time_ranges, state='readonly', width=6)
+    time_dropdown.pack(side="left", padx=5)
+
+    # Result display
+    result_text = tk.StringVar()
+    result_label = ttk.Label(root, textvariable=result_text, font=("Segoe UI", 11), padding=10, justify="left")
+    result_label.pack(fill="x", padx=10)
+
+    # Plot container
+    plot_frame = ttk.Frame(root)
+    plot_frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+    def on_analyze():
+        ticker = ticker_var.get().upper().strip()
+        period = selected_time_range.get()
+
+        if not ticker:
+            messagebox.showwarning("Input Error", "Please enter a stock ticker symbol.")
+            return
+
+        result_text.set("Fetching data...")
+        root.update()
+
+        df, error = fetch_data(ticker, period=period)
+        if error:
+            messagebox.showerror("Data Error", error)
+            result_text.set("")
+            for w in plot_frame.winfo_children():
+                w.destroy()
+            return
+
+        current_price = df['Close'].iloc[-1]
+        info = f"Current price for {ticker}: ${current_price:.2f}"
+
+        est_5d, est_10d, combined, combined_expl, alert = analyze_separate_and_combined_trends(df)
+
+        output = info
+        for part in [est_5d, est_10d, combined, combined_expl]:
+            if part:
+                output += "\n" + part
+
+        if alert:
+            output += f"\n\n*** ALERT: {alert} ***"
+
+        result_text.set(output)
+
+        plot_stock(df, ticker, plot_frame)
+
+    analyze_button = ttk.Button(frame, text="Analyze", command=on_analyze)
+    analyze_button.pack(side="left", padx=10)
+
+    root.mainloop()
+
+# ----------------------------------------
+# Entry point
+# ----------------------------------------
+if __name__ == "__main__":
+    run_gui()
